@@ -50,3 +50,23 @@ exports.getUserExercises = (userId, from, to, limit, callback) => {
 
   db.all(query, params, callback);
 };
+
+exports.countUserExercises = (userId, from, to, callback) => {
+  let query = "SELECT COUNT(*) AS count FROM exercises WHERE user_id = ?";
+  const params = [userId];
+
+  if (from) {
+    query += " AND date >= ?";
+    params.push(from);
+  }
+
+  if (to) {
+    query += " AND date <= ?";
+    params.push(to);
+  }
+
+  db.get(query, params, (err, row) => {
+    if (err) return callback(err);
+    callback(null, row.count);
+  });
+};

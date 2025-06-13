@@ -5,10 +5,12 @@ exports.createUser = (req, res) => {
   if (!username) return res.status(400).send("Username is required");
 
   userService.registerUser(username, (err, user) => {
-    if (err?.message.includes("UNIQUE constraint")) {
-      return res.status(400).json({ error: "Username must be unique" });
+    if (err) {
+      if (err.message.toLowerCase().includes("unique")) {
+        return res.status(400).json({ error: "Username must be unique" });
+      }
+      return res.status(500).json({ error: "Database error: " + err.message });
     }
-    if (err) return res.status(500).send("Database error");
     res.json(user);
   });
 };
@@ -22,11 +24,28 @@ exports.getAllUsers = (req, res) => {
 
 exports.addExercise = (req, res) => {
   userService.addExerciseToUser(req.params._id, req.body, (err, exercise) => {
-    if (err?.message === "User not found")
-      return res.status(404).send("User not found");
-    if (err?.message.includes("Invalid"))
-      return res.status(400).send(err.message);
-    if (err) return res.status(500).send("Failed to add exercise");
+    if (err) {
+      if (err.message === "User not found") {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (err.validationErrors && Array.isArray(err.validationErrors)) {
+        return res.status(400).json({ errors: err.validationErrors });
+      }
+
+      if (
+        err.message === "Description is required" ||
+        err.message === "Duration must be a positive number" ||
+        err.message === "Invalid date format"
+      ) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      return res
+        .status(500)
+        .json({ error: "Failed to add exercise: " + err.message });
+    }
+
     res.json(exercise);
   });
 };
